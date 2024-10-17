@@ -16,6 +16,6 @@ class BGK(LBM):
         f_eq = self.equilibrium(rho, u)
         f_neq = f - f_eq
         f_post_col = f - 1/self.tau * f_neq
-        if self.calculate_force is not None:
+        if self.force is not None:
             f_post_col = self.apply_force(f_post_col, f_eq, rho, u)
         return f_post_col

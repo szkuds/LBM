@@ -27,7 +27,7 @@ class LBM(object):
         self.d = self.lattice.d
         self.cs = self.lattice.cs
         self.cs2 = self.lattice.cs2
-        self.inv_cs2 = self.lattice.inv_cs2
+        self.inv_cs2: float = self.lattice.inv_cs2
         self.i = self.lattice.i
 
         self.print_simulation_parameters()
@@ -46,7 +46,7 @@ class LBM(object):
         self.bc_i = self.bc_i()
         # Create boundary data for the simulation
         self.create_boundary_data()
-        self.calculate_force()
+        self.force = self.calculate_force()
 
         # Directory to store the data
         self.save_dir = kwargs.get("save_dir", "./sim_data/")
@@ -86,15 +86,16 @@ class LBM(object):
 
     @partial(jax.jit, static_argnums=0)
     def equilibrium(self, rho, u):
-        cu = self.inv_cs2 * jnp.dot(u, self.c)
-        usq = 0.5 * self.inv_cs2 * jnp.sum(jnp.square(u), axis=-1)
-        return rho[..., jnp.newaxis] * self.w[jnp.newaxis, jnp.newaxis, ...] * (1.0 + cu * (1.0 + 0.5 * cu) - usq[...,jnp.newaxis])
+        cu = self.inv_cs2 * (jnp.einsum('xya, ai-> xyi', u, self.c))
+        usq = 0.5 * self.inv_cs2 * jnp.sum(jnp.square(u), axis=-1, keepdims=True)
+        rho_w = jnp.einsum('xy, i->xyi', rho, self.w)
+        return rho_w * (1.0 + cu * (1.0 + 0.5 * cu) - usq)
 
     #  TODO: Need to ensure that in the documentation it is noted that the index should always be the last element
     @partial(jit, static_argnums=0, inline=True)
     def macro_vars(self, f):
-        rho = jnp.sum(f, axis=-1, keepdims=True)
-        u = jnp.dot(f, self.c.T) / rho
+        rho = jnp.sum(f, axis=-1)
+        u = jnp.dot(f, self.c.T) / rho[..., np.newaxis]
         return rho, u
 
     def calculate_force(self):
@@ -194,8 +195,8 @@ class LBM(object):
                     row = f"{colored(descriptive_name, 'blue'):>30} | {colored(type(value).__name__, 'yellow')}"
                 print(row)
 
-    def apply_bc(self, f_post_col, f_prev, param):
-        pass
+    def apply_bc(self, f_post_col, f_prev):
+        return f_post_col
 
     @property
     def tau(self):
@@ -203,8 +204,12 @@ class LBM(object):
 
     @tau.setter
     def tau(self, value):
-        if value is None or not isinstance(value, (int, float)):
-            raise ValueError("tau must be a number")
+        if value is None:
+            raise ValueError("tau must be provided")
+        if not isinstance(value, (int, float)):
+            raise TypeError("tau must be an integer or a float")
+        if value <= 0:
+            raise ValueError("tau must be a positive integer")
         self._tau = value
 
     @property

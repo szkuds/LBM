@@ -13,7 +13,7 @@ class Couette2D(BGK):
     def set_bc(self):
         pass
 
-    def data(self, **kwargs):
+    def data(self):
         rho = np.array(kwargs['rho'])
         u = np.array(kwargs['u'])
         it = np.array(kwargs['it'])
@@ -43,4 +43,4 @@ if __name__ == "__main__":
         'print_info_rate': 100
     }
     sim = Couette2D(**kwargs)
-    sim.run(100)
+    sim.run(1000)
