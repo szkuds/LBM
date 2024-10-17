@@ -72,9 +72,8 @@ class LBM(object):
     @partial(jax.jit, static_argnums=0)
     def update(self, f_prev):
         f_post_col = self.collision(f_prev)
-        f_post_col = self.apply_bc(f_post_col, f_prev, "Post Collision")
+        f_post_col = self.apply_bc(f_post_col, f_prev)
         f_post_col = self.streaming(f_post_col)
-        f_post_col = self.apply_bc(f_post_col, f_prev, "Post Streaming")
         return f_post_col, f_prev
 
     @property
@@ -195,6 +194,9 @@ class LBM(object):
                     row = f"{colored(descriptive_name, 'blue'):>30} | {colored(type(value).__name__, 'yellow')}"
                 print(row)
 
+    def apply_bc(self, f_post_col, f_prev, param):
+        pass
+
     @property
     def tau(self):
         return self._tau
@@ -279,5 +281,3 @@ class LBM(object):
             raise ValueError("saveInfoRate must be a non-negative integer")
         self._save_info_rate = value
 
-    def apply_bc(self, f_post_col, f_prev, param):
-        pass
